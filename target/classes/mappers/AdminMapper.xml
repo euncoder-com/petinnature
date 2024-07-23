@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="AdminDAO">
+
+
+    <!-- 상품목록 확인 -->
+    <select id='adminProductsList' resultType="ProductVO" parameterType="ProductVO">
+select product_no,
+       product_name,
+       product_price,
+       product_content,
+       product_img,
+       product_cnt
+from pet.products
+
+<where>
+<if test="productName!=null"> and product_name LIKE '%${productName}%' </if>
+</where>
+	</select>
+
+
+    <select id='productTypeInfo' resultType="HashMap" parameterType="ProductVO">
+select p.product_no, p.product_name, p.product_content, p.product_price, p.product_img, p.product_cnt
+		,c1.pet_cate,
+    	c1.big_cate,
+    	c1.small_cate,
+    	pc.cate_no
+FROM
+    categories c1
+inner join
+	(
+	select pc.product_no,
+            pc.cate_no,
+            c.cate
+	from product_cate pc
+	INNER JOIN
+            categories c ON pc.cate_no = c.cate_no)
+	pc on c1.cate_no = pc.cate_no
+	INNER JOIN
+    products p ON pc.product_no = p.product_no
+where p.product_no = #{productNo} and c1.small_cate != 6
+	</select>
+	
+	
+	    <select id='productBrandInfo' resultType="HashMap" parameterType="ProductVO">
+select p.product_no, p.product_name, p.product_content, p.product_price, p.product_img, p.product_cnt
+		,c1.pet_cate,
+    	c1.big_cate,
+    	c1.small_cate,
+    	pc.cate_no
+FROM
+    categories c1
+inner join
+	(
+	select pc.product_no,
+            pc.cate_no,
+            c.cate
+	from product_cate pc
+	INNER JOIN
+            categories c ON pc.cate_no = c.cate_no)
+	pc on c1.cate_no = pc.cate_no
+	INNER JOIN
+    products p ON pc.product_no = p.product_no
+where p.product_no = #{productNo} and c1.small_cate = 6
+	</select>
+
+    <update id='modifyBrand' parameterType="HashMap">
+UPDATE product_cate
+INNER JOIN categories ON product_cate.cate_no = categories.cate_no
+SET product_cate.cate_no = #{cate_no}
+WHERE categories.small_cate = #{small_cate}
+AND product_cate.product_no = #{product_no} AND product_cate.cate_no = #{originCateNo};
+	</update>
+
+
+
+    <update id='modifyProduct' parameterType="HashMap">
+UPDATE products
+SET product_name = #{product_name}, product_price = #{product_price}, product_content = #{product_content}, product_cnt = #{product_cnt}
+where product_no = #{product_no}
+	</update>
+	
+	    <insert id='addProduct' parameterType="ProductVO">
+INSERT INTO products(product_name, product_price, product_content, product_cnt, product_img)
+VALUES (#{productName}, #{productPrice}, #{productContent}, #{productCnt}, #{productImg})
+	</insert>
+	
+	    <insert id='addTypeProduct' parameterType="HashMap">
+INSERT INTO product_cate(product_no, cate_no)
+VALUES (#{product_no}, #{cate_no})
+	</insert>
+	
+<insert id='writeAnswer' parameterType="AnswerVO">
+INSERT INTO answer(q_no, answer_content, adate, admin_id)
+VALUES (#{qno}, #{answercontent}, sysdate(), #{adminid})
+	</insert>
+	
+	
+	    <update id='updateQnaStatus' parameterType="QnaVO">
+UPDATE qna
+SET process = '처리완료'
+WHERE q_no = #{qNo}
+	</update>	
+	
+	
+	    <update id='modifyCategory' parameterType="HashMap">
+UPDATE product_cate
+INNER JOIN categories ON product_cate.cate_no = categories.cate_no
+SET product_cate.cate_no = #{cate_no}
+WHERE categories.small_cate != 6
+AND product_cate.product_no = #{product_no} AND product_cate.cate_no = #{originCateNo};
+	</update>
+
+<!--   주문목록 확인   -->
+<select id="adminOrdersList" parameterType="HashMap" resultType="OrderVO"> 
+select * 
+from pet.orders 
+order by order_no desc 
+limit #{startRow}, #{pageSize}
+</select>
+<!--   Qna목록 확인   -->
+<select id="adminQnaList" parameterType="HashMap" resultType="QnaVO"> 
+select q.q_no, q.product_no, q.id, q.title, q.content, q.qdate, q.process, q.qna_type, p.product_name, p.product_price, p.product_content, p.product_img, p.product_cnt 
+from pet.qna as q 
+inner join pet.products as p on q.product_no = p.product_no 
+order by q.q_no desc
+limit #{startRow}, #{pageSize}
+</select>
+
+
+	<select id='getAdminOrdersList'
+		resultType="Integer">
+		select count(order_no) as orders
+		from orders
+	</select>
+
+	<select id='getAdminQnaList'
+		resultType="Integer">
+		select count(q_no) as qna_count
+		from qna
+	</select>
+
+<update id="adminUpdateOrderStatus" parameterType="OrderVO"> UPDATE pet.orders t SET t.orderstatus = #{orderstatus} WHERE t.order_no = #{orderNo} </update>
+
+
+<delete id="deleteCate" parameterType="list">
+    DELETE FROM product_cate
+    WHERE product_no IN
+    <foreach item="productNo" index="index" collection="list" open="(" separator="," close=")">
+        #{productNo}
+    </foreach>
+</delete>
+
+    <select id='addProductNum' resultType="Integer">
+SELECT product_no FROM products
+ORDER BY product_no DESC
+LIMIT 1;
+	</select>
+
+
+<select id="saleschartList" resultType="HashMap"> SELECT a.product_no, min(a.product_name) product_name, sum(od.cnt) cnt FROM (
+      SELECT
+         p.*,
+          min(c2.cate) AS 펫,
+          group_concat(c3.cate) AS 최상위카테고리,
+          min(c4.cate) AS 상위카테고리,
+          group_concat(pc.cate) AS 제품카테고리
+      FROM
+          categories c1
+      INNER JOIN
+          categories c2 ON c1.pet_cate = c2.cate_no
+      INNER JOIN
+          categories c3 ON c1.small_cate = c3.cate_no
+      INNER JOIN
+          categories c4 ON c1.big_cate = c4.cate_no
+      INNER JOIN
+          (
+        SELECT
+        pc.product_no,
+        pc.cate_no,
+        c.cate
+        FROM
+        product_cate pc
+        INNER JOIN
+        categories c ON pc.cate_no = c.cate_no
+       ) pc ON c1.cate_no = pc.cate_no
+      INNER JOIN
+          products p ON pc.product_no = p.product_no
+      GROUP BY p.product_no
+      HAVING 펫= #{cate}
+      ORDER BY p.product_no) AS a INNER JOIN order_detail od
+      ON a.product_no = od.product_no
+      GROUP BY a.product_no
+      order by cnt desc
+      limit 0, 6;
+       </select>
+
+<select id="selectQna" parameterType="Integer" resultType="HashMap"> 
+select qna.q_no, products.product_name , qna.product_no, qna.id, qna.title, qna.content, qna.qdate, qna.process, qna.qna_type 
+from qna 
+inner join products on products.product_no = qna.product_no 
+Where q_no = #{qNo} 
+</select>
+
+
+<!--   회원목록 확인   -->
+<select id="membersList" parameterType="HashMap" resultType="MemberVO">
+select * from pet.members
+<where>
+<if test="name!=null"> and name LIKE '%${name}%' </if>
+</where>
+order by id desc
+limit #{startRow}, #{pageSize}
+</select>
+
+
+	<select id='getMemberList'
+		resultType="Integer">
+		select count(id)
+		from members
+	</select>
+
+
+
+</mapper>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="MypageDAO">
+
+	<select id='getqnaList' parameterType="HashMap"
+		resultType="HashMap">
+		select		q.q_no, q.product_no, p.product_name, q.title, q.content, q.qna_type, q.process, q.qdate
+		from 		qna q
+		inner join  products p on q.product_no = p.product_no
+		where 		q.id = #{id}
+		order by 	q.q_no desc
+		limit 		#{startRow}, #{pageSize}
+	</select>
+
+
+	<select id='getqnaTotalCount' parameterType="String"
+		resultType="Integer">
+		select count(q_no) as qna_count
+		from qna
+		where id = #{id}
+	</select>
+
+
+	<select id='getAnswer' parameterType="Integer"
+		resultType="String">
+		select answer_content
+		from answer
+		where q_no = #{qno};
+	</select>
+
+
+	<!-- 문의등록 -->
+	<insert id="writeQna" parameterType="com.javaclass.domain.QnaVO">
+        INSERT INTO qna (product_no, order_no, id, title, content, qdate, qna_type) VALUES (#{productNo}, #{orderNo} , #{id}, #{title}, #{content}, sysdate(), #{qnaType})
+    </insert>
+
+
+<!--  후기내역   -->
+<select id="getMemberReview" parameterType="com.javaclass.domain.ReviewVO" resultType="java.util.HashMap"> select r.review_no, p.product_no, p.product_name, r.content, r.rdate, r.rate from reviews r inner join products p ON r.product_no = p.product_no; </select>
+<!--  후기삭제  -->
+<delete id="deleteReview" parameterType="com.javaclass.domain.ReviewVO"> DELETE FROM reviews WHERE review_no = #{review_no} </delete>
+<!--  후기페이지   -->
+<select id="getreviewList" parameterType="HashMap" resultType="HashMap"> select r.review_no, p.product_no, p.product_name, r.content, r.rdate, r.rate from reviews r inner join products p on r.product_no = p.product_no where r.id = #{id} order by r.review_no desc limit #{startRow}, #{pageSize} </select>
+<select id="getreviewTotalCount" parameterType="String" resultType="int"> select count(review_no) as review_count from reviews where id = #{id} </select>
+<!--  후기작성   -->
+<insert id="insertReview" parameterType="com.javaclass.domain.ReviewVO">
+insert into reviews( product_no, id, title, content, rdate, rate
+<if test="review_img != null"> , review_img, b_fsize, b_realfname </if>
+)values( #{product_no}, #{id}, #{title}, #{content}, sysdate(), #{rate}
+<if test="review_img != null"> , #{review_img}, #{b_fsize}, #{b_realfname} </if>
+)
+</insert>
+<!--  주문내역  -->
+<select id="getMemberOrderlist" parameterType="com.javaclass.domain.MemberVO" resultType="java.util.HashMap"> select o.order_no,p.product_no, p.product_name, o.cnt, o.cnt*p.product_price as price, o2.orderstatus FROM order_detail o INNER JOIN products p ON o.product_no = p.product_no INNER JOIN orders o2 ON o.order_no = o2.order_no where id = #{id} </select>
+<!--  주문내역페이징   -->
+<select id="getorderList" parameterType="HashMap" resultType="HashMap"> 
+select o.order_no,p.product_no, p.product_name, o.cnt, o.cnt*p.product_price as price, o2.orderstatus, o2.rdate
+FROM order_detail o INNER JOIN products p ON o.product_no = p.product_no INNER JOIN orders o2 ON o.order_no = o2.order_no where o2.id = #{id} order by o.order_product_no desc limit #{startRow}, #{pageSize}
+</select>
+<select id="getorderTotalCount" parameterType="String" resultType="int"> select count(order_product_no) as count FROM order_detail o INNER JOIN products p ON o.product_no = p.product_no INNER JOIN orders o2 ON o.order_no = o2.order_no where o2.id = #{id} order by o.order_product_no desc; </select>
+<!--  주문내역취소   -->
+<select id="getMemberOrdercancel" resultType="java.util.HashMap"> select o.order_no,p.product_no, p.product_name, o.cnt, o.cnt*p.product_price as price, o2.orderstatus, o2.rdate FROM order_detail o INNER JOIN products p ON o.product_no = p.product_no INNER JOIN orders o2 ON o.order_no = o2.order_no where o.order_no = #{order_no} </select>
+<select id="getMemberOrderinfo" resultType="java.util.HashMap"> select o.rname rname, o.rtel rtel, o.raddress raddress, o.request request, m.email email, o.price price, o.delivery_fee delivery_fee, g.discount_rate discount_rate, o.payment payment, (o.price*(1-g.discount_rate/100)-2500)as pri from orders o inner join members m ON o.id = m.id inner join grades g on m.grade_name = g.grade_name where o.order_no = #{order_no}; </select>
+<update id="orderCancelDB"> update orders set orderstatus = '주문취소' where order_no=#{order_no}; </update>
+
+<update id="exituser" parameterType="com.javaclass.domain.MemberVO"> update members set member_status = 'N' where id = #{id}; </update>
+
+
+
+</mapper>
